@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>MSECS.DeviceRegistry.Api</RootNamespace>
+    <UserSecretsId>msecs-device-registry-api</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MSECS.DeviceRegistry.Application\MSECS.DeviceRegistry.Application.csproj" />
+    <ProjectReference Include="..\MSECS.DeviceRegistry.Infrastructure\MSECS.DeviceRegistry.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\Shared\MSECS.BuildingBlocks\MSECS.BuildingBlocks.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>MSECS.Asset.Api</RootNamespace>
+    <UserSecretsId>msecs-asset-api</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MSECS.Asset.Application\MSECS.Asset.Application.csproj" />
+    <ProjectReference Include="..\MSECS.Asset.Infrastructure\MSECS.Asset.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\Shared\MSECS.BuildingBlocks\MSECS.BuildingBlocks.csproj" />
+  </ItemGroup>
+</Project>
