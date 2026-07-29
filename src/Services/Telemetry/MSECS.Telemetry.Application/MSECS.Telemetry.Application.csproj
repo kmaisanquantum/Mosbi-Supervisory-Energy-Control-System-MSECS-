@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>MSECS.Telemetry.Application</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MediatR" Version="12.4.1" />
+    <PackageReference Include="FluentValidation" Version="11.10.0" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.10.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MSECS.Telemetry.Domain\MSECS.Telemetry.Domain.csproj" />
+    <ProjectReference Include="..\..\..\Shared\MSECS.SharedKernel\MSECS.SharedKernel.csproj" />
+  </ItemGroup>
+</Project>

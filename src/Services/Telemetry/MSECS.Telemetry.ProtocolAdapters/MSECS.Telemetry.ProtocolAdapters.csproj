@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>MSECS.Telemetry.ProtocolAdapters</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="NModbus" Version="3.0.81" />
+    <PackageReference Include="MQTTnet" Version="4.3.7.1207" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Shared\MSECS.SharedKernel\MSECS.SharedKernel.csproj" />
+  </ItemGroup>
+</Project>
