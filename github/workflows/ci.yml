@@ -1,0 +1,64 @@
+name: MSECS CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore MSECS.sln
+
+      - name: Build
+        run: dotnet build MSECS.sln --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test MSECS.sln --no-build --configuration Release --logger "trx;LogFileName=test-results.trx" --collect:"XPlat Code Coverage"
+
+      - name: Publish test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: '**/test-results.trx'
+
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    strategy:
+      matrix:
+        service:
+          - { name: identity, dockerfile: Services/Identity/MSECS.Identity.Api/Dockerfile }
+          - { name: site, dockerfile: Services/Site/MSECS.Site.Api/Dockerfile }
+          - { name: asset, dockerfile: Services/Asset/MSECS.Asset.Api/Dockerfile }
+          - { name: device-registry, dockerfile: Services/DeviceRegistry/MSECS.DeviceRegistry.Api/Dockerfile }
+          - { name: telemetry, dockerfile: Services/Telemetry/MSECS.Telemetry.Api/Dockerfile }
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build ${{ matrix.service.name }} image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./src
+          file: ./src/${{ matrix.service.dockerfile }}
+          push: false
+          tags: msecs-${{ matrix.service.name }}:ci

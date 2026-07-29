@@ -1,0 +1,226 @@
+# Mosbi Supervisory Energy Control System (MSECS) — Phase 1 local development stack.
+# `docker compose up -d` brings up all infrastructure + microservices.
+# Individual services can still be run from the IDE against this infra by using
+# appsettings.Development.json (localhost hostnames/ports) instead of these
+# in-network hostnames.
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Infrastructure
+  # ---------------------------------------------------------------------------
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: msecs-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: msecs
+      POSTGRES_PASSWORD: msecs_dev_password
+      POSTGRES_DB: msecs
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/postgres-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U msecs"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  timescaledb:
+    image: timescale/timescaledb:2.17.2-pg16
+    container_name: msecs-timescaledb
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: msecs
+      POSTGRES_PASSWORD: msecs_dev_password
+      POSTGRES_DB: msecs_telemetry
+    ports:
+      - "5433:5432"
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U msecs"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: msecs-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: msecs-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: msecs
+      RABBITMQ_DEFAULT_PASS: msecs_dev_password
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: msecs-mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./scripts/mosquitto.conf:/mosquitto/config/mosquitto.conf
+
+  minio:
+    image: minio/minio:latest
+    container_name: msecs-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: msecs
+      MINIO_ROOT_PASSWORD: msecs_dev_password
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Console
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  seq:
+    image: datalust/seq:latest
+    container_name: msecs-seq
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+    ports:
+      - "5341:80"
+
+  # ---------------------------------------------------------------------------
+  # Microservices
+  # ---------------------------------------------------------------------------
+
+  identity-api:
+    build:
+      context: ./src
+      dockerfile: Services/Identity/MSECS.Identity.Api/Dockerfile
+    container_name: msecs-identity-api
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__IdentityDb: "Host=postgres;Port=5432;Database=msecs_identity;Username=msecs;Password=msecs_dev_password"
+      ConnectionStrings__Redis: "redis:6379"
+      Jwt__SigningKey: "${MSECS_JWT_SIGNING_KEY:-local-dev-signing-key-change-me-please-32chars}"
+      RabbitMq__HostName: rabbitmq
+      RabbitMq__UserName: msecs
+      RabbitMq__Password: msecs_dev_password
+      Serilog__SeqUrl: "http://seq:80"
+    ports:
+      - "5101:8080"
+
+  site-api:
+    build:
+      context: ./src
+      dockerfile: Services/Site/MSECS.Site.Api/Dockerfile
+    container_name: msecs-site-api
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__SiteDb: "Host=postgres;Port=5432;Database=msecs_site;Username=msecs;Password=msecs_dev_password"
+      Jwt__SigningKey: "${MSECS_JWT_SIGNING_KEY:-local-dev-signing-key-change-me-please-32chars}"
+      RabbitMq__HostName: rabbitmq
+      RabbitMq__UserName: msecs
+      RabbitMq__Password: msecs_dev_password
+      Serilog__SeqUrl: "http://seq:80"
+    ports:
+      - "5102:8080"
+
+  asset-api:
+    build:
+      context: ./src
+      dockerfile: Services/Asset/MSECS.Asset.Api/Dockerfile
+    container_name: msecs-asset-api
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__AssetDb: "Host=postgres;Port=5432;Database=msecs_asset;Username=msecs;Password=msecs_dev_password"
+      Jwt__SigningKey: "${MSECS_JWT_SIGNING_KEY:-local-dev-signing-key-change-me-please-32chars}"
+      RabbitMq__HostName: rabbitmq
+      RabbitMq__UserName: msecs
+      RabbitMq__Password: msecs_dev_password
+      Serilog__SeqUrl: "http://seq:80"
+    ports:
+      - "5103:8080"
+
+  device-registry-api:
+    build:
+      context: ./src
+      dockerfile: Services/DeviceRegistry/MSECS.DeviceRegistry.Api/Dockerfile
+    container_name: msecs-device-registry-api
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DeviceRegistryDb: "Host=postgres;Port=5432;Database=msecs_device_registry;Username=msecs;Password=msecs_dev_password"
+      Jwt__SigningKey: "${MSECS_JWT_SIGNING_KEY:-local-dev-signing-key-change-me-please-32chars}"
+      RabbitMq__HostName: rabbitmq
+      RabbitMq__UserName: msecs
+      RabbitMq__Password: msecs_dev_password
+      Serilog__SeqUrl: "http://seq:80"
+    ports:
+      - "5104:8080"
+
+  telemetry-api:
+    build:
+      context: ./src
+      dockerfile: Services/Telemetry/MSECS.Telemetry.Api/Dockerfile
+    container_name: msecs-telemetry-api
+    restart: unless-stopped
+    depends_on:
+      timescaledb: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      mosquitto: { condition: service_started }
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__TelemetryDb: "Host=timescaledb;Port=5432;Database=msecs_telemetry;Username=msecs;Password=msecs_dev_password"
+      Jwt__SigningKey: "${MSECS_JWT_SIGNING_KEY:-local-dev-signing-key-change-me-please-32chars}"
+      RabbitMq__HostName: rabbitmq
+      RabbitMq__UserName: msecs
+      RabbitMq__Password: msecs_dev_password
+      Mqtt__BrokerHost: mosquitto
+      Mqtt__BrokerPort: "1883"
+      Serilog__SeqUrl: "http://seq:80"
+    ports:
+      - "5105:8080"
+
+volumes:
+  postgres_data:
+  timescale_data:
+  minio_data:
