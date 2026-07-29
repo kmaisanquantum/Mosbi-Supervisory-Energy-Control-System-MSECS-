@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>MSECS.Identity.Api</RootNamespace>
+    <UserSecretsId>msecs-identity-api</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MSECS.Identity.Application\MSECS.Identity.Application.csproj" />
+    <ProjectReference Include="..\MSECS.Identity.Infrastructure\MSECS.Identity.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\Shared\MSECS.BuildingBlocks\MSECS.BuildingBlocks.csproj" />
+  </ItemGroup>
+
+</Project>
